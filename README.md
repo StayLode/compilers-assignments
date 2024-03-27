@@ -1,4 +1,4 @@
-# compilers assignments
+# Compilers Assignments
 ## Assignment 1
 Implementare tre passi LLVM (dentro lo stesso passo LocalOpts già scritto durante il LAB 2) che realizzano le seguenti ottimizzazioni locali:
  
