@@ -18,29 +18,29 @@ bool runOnBasicBlock(BasicBlock &B) {
     
     for (auto &i: B){
       BinaryOperator *mul = dyn_cast<BinaryOperator>(&i);
-      if (not mul or mul->getOpcodeName() |= BinaryOperator::Mul)
+      if (not mul or mul->getOpcode() != BinaryOperator::Mul)
         continue;
       
       ConstantInt *C;
       Value *Factor;
 
-      C = dyn_cast<ConstantInt>(mul->getOperand(0))
+      C = dyn_cast<ConstantInt>(mul->getOperand(0));
       Factor = mul->getOperand(1);
 
       if (not C or not C->getValue().isPowerOf2()){
-        C = dyn_cast<ConstantInt>(mul->getOperand(1))
+        C = dyn_cast<ConstantInt>(mul->getOperand(1));
         if (not C or not C->getValue().isPowerOf2()){
-          outs()<< *mul << ": no operand is a constant integer or power of 2\n"
+          outs()<< *mul << ": no operand is a constant integer or power of 2\n";
           continue;
         }
 
-        Factor = mul->getOperand(2);
+        Factor = mul->getOperand(0);
       }
       
       outs()<<"Converting "<< *mul << " to left shift\n";
       Constant *shiftConst = ConstantInt::get(C->getType(), C->getValue().exactLogBase2());
       Instruction *new_shift = BinaryOperator::Create(BinaryOperator::Shl, Factor, shiftConst);
-      new_shift->InsertAfter(mul);
+      new_shift->insertAfter(mul);
       mul->replaceAllUsesWith(new_shift);
 
     }
