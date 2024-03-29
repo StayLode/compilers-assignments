@@ -24,10 +24,10 @@ bool isPow2MinusOne(ConstantInt*);
 bool runOnBasicBlock(BasicBlock &B) {
     for (auto &i: B){
       // Algebraic Identity takes priority over Basic Strength Reduction
-      AlgebraicId(i) || BasicSR(i);
+      AlgebraicId(i) || AdvancedSR(i) || BasicSR(i);
 
       // Advanced Strength Reduction
-      AdvancedSR(i);
+      
       
       // Multi-Instruction Optimization
       MultiInstOpt(i);
@@ -119,42 +119,37 @@ bool isPow2MinusOne(ConstantInt *C){
 
 
 bool AdvancedSR(Instruction &i){
-  auto opCode = i.getOpcode();
-  if (opCode != Instruction::Mul and opCode != Instruction::SDiv)
-    return false;
   
+  auto opCode = i.getOpcode();
+  if (opCode != Instruction::Mul and opCode != Instruction::SDiv){
+    return false;
+  }
   Value *Factor = i.getOperand(0);
   ConstantInt *C = dyn_cast<ConstantInt>(i.getOperand(1));
 
-  bool isClose = isCloseToPow2(C); 
-
   if (opCode == Instruction::Mul){
-    if(not C or not C->getValue().isPowerOf2() or not isClose){
-      C = dyn_cast<ConstantInt>(i.getOperand(0));
-      isClose = isCloseToPow2(C); 
-      if(not C or not C->getValue().isPowerOf2() or not isClose){
-        outs()<< i << ": no operand is a constant integer nor power of 2, or close to it\n";
-        return false;
-      }
-      Factor = i.getOperand(1);
-    } 
-  }else if((opCode == Instruction::SDiv)){
-      if(not C or not C->getValue().isPowerOf2() or not isClose){
-      C = dyn_cast<ConstantInt>(i.getOperand(0));
-      isClose = isCloseToPow2(C); 
-      if(not C or not C->getValue().isPowerOf2() or not isClose){
-        outs()<< i << ": no operand is a constant integer nor power of 2, or close to it\n";
-        return false;
-      }
-      Factor = i.getOperand(1);
-      }
+    if(not C or not(C->getValue().isPowerOf2() or isCloseToPow2(C))){
+        C = dyn_cast<ConstantInt>(i.getOperand(0));
+        
+        if(not C or not(C->getValue().isPowerOf2() or isCloseToPow2(C))){
+          outs()<< i << ": no operand is a constant integer nor power of 2, or close to it\n";
+          return false;
+        }
+        Factor = i.getOperand(1);
     }
-  
-  Instruction::BinaryOps opType = isPow2MinusOne(C) ? BinaryOperator::Sub : BinaryOperator::Add;
+  }else{
+    if(not C or not C->getValue().isPowerOf2()){
+      outs()<< i << ": no right operand is a constant integer nor power of 2\n";
+      return false;
+    }
+  }
+  Instruction::BinaryOps shiftType = (opCode == Instruction::Mul) ? BinaryOperator::Shl : BinaryOperator::LShr;
+  Instruction::BinaryOps opType = isPow2MinusOne(C) ? BinaryOperator::Add : BinaryOperator::Sub;
   APInt adaptedValue = isPow2MinusOne(C) ? (C->getValue()-1) : (C->getValue()+1);
-  if (isClose){
+
+  if (isCloseToPow2(C)){
       Constant *shiftConst = ConstantInt::get(C->getType(), (adaptedValue).exactLogBase2());
-      Instruction *new_shift = BinaryOperator::Create(BinaryOperator::Shl, Factor, shiftConst);
+      Instruction *new_shift = BinaryOperator::Create(shiftType, Factor, shiftConst);
       Instruction *new_adapt = BinaryOperator::Create(opType, new_shift, Factor);
 
       new_shift->insertAfter(&i);
@@ -163,7 +158,7 @@ bool AdvancedSR(Instruction &i){
   }
   else{
     Constant *shiftConst = ConstantInt::get(C->getType(), C->getValue().exactLogBase2());
-    Instruction *new_shift = BinaryOperator::Create(BinaryOperator::Shl, Factor, shiftConst);
+    Instruction *new_shift = BinaryOperator::Create(shiftType, Factor, shiftConst);
     new_shift->insertAfter(&i);
     i.replaceAllUsesWith(new_shift);
   }
