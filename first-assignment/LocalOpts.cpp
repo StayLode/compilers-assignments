@@ -24,7 +24,7 @@ bool MultiInstOpt(Instruction&, Instruction::BinaryOps);
 
 bool isCloseToPow2(ConstantInt*);
 bool isPow2MinusOne(ConstantInt*);
-
+bool isPow2PlusOne(ConstantInt*);
 
 PreservedAnalyses LocalOpts::run(Module &M, ModuleAnalysisManager &AM) {
   for (auto Fiter = M.begin(); Fiter != M.end(); ++Fiter)
@@ -52,39 +52,48 @@ bool runOnBasicBlock(BasicBlock &B) {
           "\t2. ADVANCED STRENGTH REDUCTION\n"
           "\t3. MULTI-INSTRUCTION OPTIMIZATION\n\n";
 
-    for (auto &i: B){
-      outs()<<i<<"\n";
+  for (auto &i: B){
+    outs()<<i<<"\n";
+    
+    BinaryOperator *bOp = dyn_cast<BinaryOperator>(&i);
+    if (not bOp)
+      continue;
+
+    auto opCode = bOp->getOpcode();
+    
+    switch(opCode){
+      case Instruction::Add:
+        AlgebraicId(i, opCode) || MultiInstOpt(i, opCode);
+        break;
+
+      case Instruction::Sub:
+        MultiInstOpt(i, opCode);
+        break;
+
+      case Instruction::Mul:
+        AlgebraicId(i, opCode) || AdvancedSR(i, opCode);
+        break;
       
-      BinaryOperator *bOp = dyn_cast<BinaryOperator>(&i);
-      if (not bOp)
-        continue;
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+        AdvancedSR(i, opCode);
+        break;
 
-      auto opCode = bOp->getOpcode();
-      
-      switch(opCode){
-        case Instruction::Add:
-          AlgebraicId(i, opCode) || MultiInstOpt(i, opCode);
-          break;
-
-        case Instruction::Sub:
-          MultiInstOpt(i, opCode);
-          break;
-
-        case Instruction::Mul:
-          AlgebraicId(i, opCode) || AdvancedSR(i, opCode);
-          break;
-        
-        case Instruction::SDiv:
-          AdvancedSR(i, opCode);
-          break;
-
-        default:
-          break;
-      }
-
+      default:
+        break;
     }
-    return true;
   }
+
+  for (auto iter = B.begin(); iter!=B.end();){
+    BinaryOperator *bOp = dyn_cast<BinaryOperator>(iter);
+    if(bOp and iter->hasNUses(0))
+      iter = iter->eraseFromParent();
+    else
+      ++iter;
+  }
+
+  return true;
+}
 
 
 
@@ -148,15 +157,18 @@ bool AlgebraicId(Instruction &i, Instruction::BinaryOps opCode){
 
 
 bool isCloseToPow2(ConstantInt *C){
-	return (C->getValue()-1).isPowerOf2() or (C->getValue()+1).isPowerOf2();
+  if (C->getValue().ugt(2))
+	  return isPow2MinusOne(C) or isPow2PlusOne(C);
+  return false;
 }
 bool isPow2MinusOne(ConstantInt *C){
 	return (C->getValue()-1).isPowerOf2();
 }
-
+bool isPow2PlusOne(ConstantInt *C){
+	return (C->getValue()+1).isPowerOf2();
+}
 
 bool AdvancedSR(Instruction &i, Instruction::BinaryOps opCode){
-  
 
   Value *Factor = i.getOperand(0);
   ConstantInt *C = dyn_cast<ConstantInt>(i.getOperand(1));
@@ -176,7 +188,6 @@ bool AdvancedSR(Instruction &i, Instruction::BinaryOps opCode){
   }
   Instruction::BinaryOps shiftType = (opCode == Instruction::Mul) ? BinaryOperator::Shl : BinaryOperator::LShr;
   Instruction::BinaryOps opType = isPow2MinusOne(C) ? BinaryOperator::Add : BinaryOperator::Sub;
-  APInt adaptedValue = isPow2MinusOne(C) ? (C->getValue()-1) : (C->getValue()+1);
 
   if (C->getValue().isPowerOf2()){
     Constant *shiftConst = ConstantInt::get(C->getType(), C->getValue().exactLogBase2());
@@ -186,7 +197,9 @@ bool AdvancedSR(Instruction &i, Instruction::BinaryOps opCode){
     i.replaceAllUsesWith(new_shift);
   }
   else{
-      Constant *shiftConst = ConstantInt::get(C->getType(), (adaptedValue).exactLogBase2());
+      APInt adaptedValue = isPow2MinusOne(C) ? (C->getValue()-1) : (C->getValue()+1);
+
+      Constant *shiftConst = ConstantInt::get(C->getType(), adaptedValue.exactLogBase2());
       Instruction *new_shift = BinaryOperator::Create(shiftType, Factor, shiftConst);
       Instruction *new_adapt = BinaryOperator::Create(opType, new_shift, Factor);
 
@@ -216,7 +229,7 @@ bool MultiInstOpt(Instruction &i, Instruction::BinaryOps opCode){
   for (auto userIter = i.user_begin(); userIter != i.user_end(); ++userIter) {
     Instruction *user = dyn_cast<Instruction>(*userIter);
     //tra quelli trovati, verificare che siano add o sub, rispettivamente se l'istruzione iniziale è sub o add
-    Instruction::BinaryOps oppositeType = (opCode==Instruction::Add) ? BinaryOperator::Sub : BinaryOperator::Add;
+    Instruction::BinaryOps oppositeType = (opCode==Instruction::Add) ? Instruction::Sub : Instruction::Add;
     if (user->getOpcode() != oppositeType) continue;
 
     ConstantInt *COpp = dyn_cast<ConstantInt>(user->getOperand(1));
