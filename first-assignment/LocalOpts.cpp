@@ -14,27 +14,25 @@
 
 using namespace llvm;
 
+bool runOnFunction(Function&);
+bool runOnBasicBlock(BasicBlock&);
+
 bool BasicSR(Instruction&);
-bool AlgebraicId(Instruction&);
-bool AdvancedSR(Instruction&);
-bool MultiInstOpt(Instruction&);
+bool AlgebraicId(Instruction&, Instruction::BinaryOps);
+bool AdvancedSR(Instruction&, Instruction::BinaryOps);
+bool MultiInstOpt(Instruction&, Instruction::BinaryOps);
+
 bool isCloseToPow2(ConstantInt*);
 bool isPow2MinusOne(ConstantInt*);
 
-bool runOnBasicBlock(BasicBlock &B) {
-  outs()<<"Optimizing Priority:\n"
-          "\t1. ALGEBRAIC IDENTITY\n"
-          "\t2. ADVANCED STRENGTH REDUCTION\n"
-          "\t3. MULTI-INSTRUCTION OPTIMIZATION\n"
-          "\t4. BASIC STRENGTH REDUCTION\n\n";
-    for (auto &i: B){
-      outs()<<i<<"\n";
-      AlgebraicId(i) || AdvancedSR(i) || MultiInstOpt(i) || BasicSR(i);
 
-    }
-    return true;
-  }
-
+PreservedAnalyses LocalOpts::run(Module &M, ModuleAnalysisManager &AM) {
+  for (auto Fiter = M.begin(); Fiter != M.end(); ++Fiter)
+    if (runOnFunction(*Fiter))
+      return PreservedAnalyses::none();
+  
+  return PreservedAnalyses::all();
+}
 
 bool runOnFunction(Function &F) {
   bool Transformed = false;
@@ -48,7 +46,50 @@ bool runOnFunction(Function &F) {
   return Transformed;
 }
 
-bool BasicSR(Instruction &i){
+bool runOnBasicBlock(BasicBlock &B) {
+  outs()<<"Optimizing Priority:\n"
+          "\t1. ALGEBRAIC IDENTITY\n"
+          "\t2. ADVANCED STRENGTH REDUCTION\n"
+          "\t3. MULTI-INSTRUCTION OPTIMIZATION\n\n";
+
+    for (auto &i: B){
+      outs()<<i<<"\n";
+      
+      BinaryOperator *bOp = dyn_cast<BinaryOperator>(&i);
+      if (not bOp)
+        continue;
+
+      auto opCode = bOp->getOpcode();
+      
+      switch(opCode){
+        case Instruction::Add:
+          AlgebraicId(i, opCode) || MultiInstOpt(i, opCode);
+          break;
+
+        case Instruction::Sub:
+          MultiInstOpt(i, opCode);
+          break;
+
+        case Instruction::Mul:
+          AlgebraicId(i, opCode) || AdvancedSR(i, opCode);
+          break;
+        
+        case Instruction::SDiv:
+          AdvancedSR(i, opCode);
+          break;
+
+        default:
+          break;
+      }
+
+    }
+    return true;
+  }
+
+
+
+
+/*bool BasicSR(Instruction &i){
   BinaryOperator *mul = dyn_cast<BinaryOperator>(&i);
   if (not mul or mul->getOpcode() != BinaryOperator::Mul){
     return false;
@@ -76,13 +117,9 @@ bool BasicSR(Instruction &i){
   mul->replaceAllUsesWith(new_shift);
 
   return true;
-}
+}*/
 
-bool AlgebraicId(Instruction &i){
-  auto opCode = i.getOpcode();
-  if (opCode != Instruction::Add and opCode != Instruction::Mul){
-    return false;
-  }
+bool AlgebraicId(Instruction &i, Instruction::BinaryOps opCode){
   
   Value *Factor = i.getOperand(0);
   ConstantInt *C = dyn_cast<ConstantInt>(i.getOperand(1));
@@ -118,10 +155,7 @@ bool isPow2MinusOne(ConstantInt *C){
 }
 
 
-bool AdvancedSR(Instruction &i){
-  auto opCode = i.getOpcode();
-  if (opCode != Instruction::Mul and opCode != Instruction::SDiv)
-    return false;
+bool AdvancedSR(Instruction &i, Instruction::BinaryOps opCode){
   
 
   Value *Factor = i.getOperand(0);
@@ -144,7 +178,14 @@ bool AdvancedSR(Instruction &i){
   Instruction::BinaryOps opType = isPow2MinusOne(C) ? BinaryOperator::Add : BinaryOperator::Sub;
   APInt adaptedValue = isPow2MinusOne(C) ? (C->getValue()-1) : (C->getValue()+1);
 
-  if (isCloseToPow2(C)){
+  if (C->getValue().isPowerOf2()){
+    Constant *shiftConst = ConstantInt::get(C->getType(), C->getValue().exactLogBase2());
+    Instruction *new_shift = BinaryOperator::Create(shiftType, Factor, shiftConst);
+    new_shift->insertAfter(&i);
+    outs()<<"\t✓ AdvancedSR Executed\n";
+    i.replaceAllUsesWith(new_shift);
+  }
+  else{
       Constant *shiftConst = ConstantInt::get(C->getType(), (adaptedValue).exactLogBase2());
       Instruction *new_shift = BinaryOperator::Create(shiftType, Factor, shiftConst);
       Instruction *new_adapt = BinaryOperator::Create(opType, new_shift, Factor);
@@ -154,23 +195,12 @@ bool AdvancedSR(Instruction &i){
       outs()<<"\t✓ AdvancedSR Executed\n";
       i.replaceAllUsesWith(new_adapt);
   }
-  else{
-    Constant *shiftConst = ConstantInt::get(C->getType(), C->getValue().exactLogBase2());
-    Instruction *new_shift = BinaryOperator::Create(shiftType, Factor, shiftConst);
-    new_shift->insertAfter(&i);
-    outs()<<"\t✓ AdvancedSR Executed\n";
-    i.replaceAllUsesWith(new_shift);
-  }
 
   return true;
 }
 
-bool MultiInstOpt(Instruction &i){
-  //verificare che sia add o sub
-  auto opCode = i.getOpcode();
-  if (opCode != Instruction::Add and opCode != Instruction::Sub)
-    return false;
-  
+bool MultiInstOpt(Instruction &i, Instruction::BinaryOps opCode){
+
   //verificare che uno dei due operandi sia una costante e salvarla in C
   Value *Factor = i.getOperand(0);
   ConstantInt *C = dyn_cast<ConstantInt>(i.getOperand(1));
@@ -202,13 +232,4 @@ bool MultiInstOpt(Instruction &i){
     user->replaceAllUsesWith(Factor);
   }
   return true;
-}
-
-
-PreservedAnalyses LocalOpts::run(Module &M, ModuleAnalysisManager &AM) {
-  for (auto Fiter = M.begin(); Fiter != M.end(); ++Fiter)
-    if (runOnFunction(*Fiter))
-      return PreservedAnalyses::none();
-  
-  return PreservedAnalyses::all();
 }
