@@ -59,6 +59,7 @@ bool runOnBasicBlock(BasicBlock &B) {
   for (auto &i: B){
     outs()<<i<<"\n";
     
+    // the considered optimizations only make sense on binary operators
     BinaryOperator *bOp = dyn_cast<BinaryOperator>(&i);
     if (not bOp)
       continue;
@@ -166,7 +167,7 @@ bool AlgebraicId(Instruction &i, Instruction::BinaryOps opCode){
 
 // functions used to test whether a number+/-1 is a power of two ("similar" power of two)
 bool isCloseToPow2(ConstantInt *C){
-  if (C->getValue().ugt(2))
+  if (C->getValue().ugt(2)) // check added to prevent 1 and 2 from being considered as "similar" power of two and not as exact ones
 	  return isPow2MinusOne(C) or isPow2PlusOne(C);
   return false;
 }
