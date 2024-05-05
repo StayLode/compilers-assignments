@@ -22,10 +22,10 @@ Consideriamo i seguenti problemi di Dataflow Analysis:
 Per ognuno di essi…
  1. Derivare una formalizzazione riempiendo lo specchietto coi parametri adeguati
 <p align="center">
-  <img src="./assets/second_assignment/formalization.png" width="100"/>
+  <img src="./assets/second_assignment/formalization.png" width="400"/>
 </p>
  2. Per il CFG di esempio fornito, popolare una tabella con le iterazioni dell’algoritmo iterativo di soluzione del problema
 <p align="center">
-  <img src="./assets/second_assignment/iteration_table.png" width="100"/>
+  <img src="./assets/second_assignment/iteration_table.png" width="400"/>
 </p>
 \
