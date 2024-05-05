@@ -21,6 +21,7 @@ Consideriamo i seguenti problemi di Dataflow Analysis:
 
 Per ognuno di essi…
  1. Derivare una formalizzazione riempiendo lo specchietto coi parametri adeguati
+ 
  ![plot](./assets/second_assignment/formalization.png)
  2. Per il CFG di esempio fornito, popolare una tabella con le iterazioni dell’algoritmo iterativo di soluzione del problema
 
