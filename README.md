@@ -12,7 +12,7 @@ Implementare tre passi LLVM (dentro lo stesso passo LocalOpts già scritto duran
 
  3. Multi-Instruction Optimization	
     - $a = b + 1, c = a − 1 ⇒ a = b + 1, c = b$
-
+\
 ## Assignment 2
 Consideriamo i seguenti problemi di Dataflow Analysis:
  - Very Busy Expressions 
@@ -22,12 +22,10 @@ Consideriamo i seguenti problemi di Dataflow Analysis:
 Per ognuno di essi…
  1. Derivare una formalizzazione riempiendo lo specchietto coi parametri adeguati
 <p align="center">
-  <img src="./assets/second_assignment/formalization.png"/>
+  <img src="./assets/second_assignment/formalization.png" width="100"/>
 </p>
-
-
-
  2. Per il CFG di esempio fornito, popolare una tabella con le iterazioni dell’algoritmo iterativo di soluzione del problema
 <p align="center">
-  <img src="./assets/second_assignment/iteration_table.png"/>
+  <img src="./assets/second_assignment/iteration_table.png" width="100"/>
 </p>
+\
