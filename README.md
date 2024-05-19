@@ -28,3 +28,7 @@ Per ognuno di essi…
 <p align="center">
   <img src="./assets/second_assignment/iteration_table.png" width="400"/>
 </p>
+
+
+## Assignment 3
+Implementare il passo di Loop Invariant Code Motion

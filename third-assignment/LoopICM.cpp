@@ -1,4 +1,4 @@
-#include "llvm/Transforms/Utils/LoopWalk.h"
+#include "llvm/Transforms/Utils/LoopICM.h"
 #include <set>
 
 using namespace llvm;
@@ -11,7 +11,7 @@ bool isInstructionLI(Instruction &Inst, Loop &L) {
     if (isa<PHINode>(Inst))
         return false;
 
-	// iterate over the instruction operands
+	// an instruction is loop invariant if its operands are loop invariant
     for (auto op_iter = Inst.op_begin(); op_iter != Inst.op_end(); op_iter++) {
         Value *Val = *op_iter;
 		if (!isOperandLI(Val, L))
@@ -29,11 +29,11 @@ bool isOperandLI(Value *Val, Loop &L) {
 
 	// find the reaching definition for Val
     Instruction *I = dyn_cast<Instruction>(Val); 
-    // check if there is exactly one reaching definition  ??Come fa a non esserci??
+    // check if there is exactly one reaching definition
 	if (!I)
         return false;
 
-	// a PHI node merges multiple reaching definitions   ??PHI Node negli operandi??
+	// a PHI node merges multiple reaching definitions
 	if(isa<PHINode>(Val))
 		return false;
 
@@ -64,19 +64,21 @@ bool isLoopDead(Instruction &Inst, Loop &L) {
 	return true;
 }
 
-PreservedAnalyses LoopWalk::run(Loop &L, LoopAnalysisManager &LAM, LoopStandardAnalysisResults &LAR, LPMUpdater &LU) {
+PreservedAnalyses LoopICM::run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR, LPMUpdater &LU) {
+
 	if (!L.isLoopSimplifyForm()) {
 		outs() << "\nThe loop is not in Simplify Form.\n";
 		return PreservedAnalyses::all();
 	}
 	outs() << "\nThe loop is in Simplify Form, let's go!\n";
 	
-
+	// set of basic blocks outside the loop
 	std::set<BasicBlock *> LoopExitBB;
+	// set of instructions that will be moved in the preheader
 	std::set<Instruction *> preHeaderInstr;
 
-  	BasicBlock *PreHeader = L.getLoopPreheader();
-	Instruction &FinalInst = PreHeader->back();
+	// last preheader block instruction
+	Instruction *FinalInst = L.getLoopPreheader()->getTerminator();
 
 
 	outs() << "********** LOOP **********\n";
@@ -96,17 +98,12 @@ PreservedAnalyses LoopWalk::run(Loop &L, LoopAnalysisManager &LAM, LoopStandardA
 			if (isInstructionLI(Inst, L)){
 				outs() << "Loop Invariant Instruction: ";
 				Inst.print(outs());
-				// for the Instruction Inst:
-				// check the dominance on all exits
-				if (dominatesAllExits(Inst, LoopExitBB, LAR.DT)){
-					preHeaderInstr.insert(&Inst);
-					outs() << "\t-> dominates all exits";
-				}
 
-				// check the absence of uses after the loop
-				if (isLoopDead(Inst, L)) {
+				// check if the Instruction Inst is eligible for the Code Motion:
+				// check the dominance on all exits or the absence of uses after the loop
+				if (dominatesAllExits(Inst, LoopExitBB, AR.DT) || isLoopDead(Inst, L)){
 					preHeaderInstr.insert(&Inst);
-					outs() << "\t-> Dead Loop: no uses after the loop";
+					outs() << "\t-> to be moved";
 				}
 
         		outs() << "\n";
@@ -116,8 +113,8 @@ PreservedAnalyses LoopWalk::run(Loop &L, LoopAnalysisManager &LAM, LoopStandardA
 
 	// move instructions in the preheader, outside the loop
 	for (Instruction *Inst : preHeaderInstr) {
-		Inst->removeFromParent(); // unlink Inst from its basic block, but does not delete it, in order to move it elsewhere
-		Inst->insertBefore(&FinalInst); 
+		Inst->removeFromParent(); 				// unlink Inst from its basic block, but does not delete it, in order to move it elsewhere
+		Inst->insertBefore(FinalInst); 
 	}
 
 	return PreservedAnalyses::all();
