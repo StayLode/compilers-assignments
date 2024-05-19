@@ -46,7 +46,5 @@ L'algoritmo si suddivide nei seguenti passaggi:
    5. Determinare la presenza di istruzioni candidate per la Code Motion:
       1. istruzioni loop invariant
       2. l’istruzione (la definizione) domina tutti gli usi (sottointeso nel SSA)
-      3. il basic block contenente l'istruzione domina tutte le uscite del loop 
-      o
-      3. la variabile definita dall'istruzione è dead all'uscita del loop, ovvero non ha usi
+      3. il basic block contenente l'istruzione domina tutte le uscite del loop OPPURE la variabile definita dall'istruzione è dead all'uscita del loop, ovvero non ha usi
    6. Spostare le istruzioni trovate nel blocco preheader.
