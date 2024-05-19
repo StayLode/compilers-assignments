@@ -12,7 +12,8 @@ Implementare tre passi LLVM (dentro lo stesso passo LocalOpts già scritto duran
 
  3. Multi-Instruction Optimization	
     - $a = b + 1, c = a − 1 ⇒ a = b + 1, c = b$
-\
+    
+    
 ## Assignment 2
 Consideriamo i seguenti problemi di Dataflow Analysis:
  - Very Busy Expressions 
@@ -28,7 +29,8 @@ Per ognuno di essi…
 <p align="center">
   <img src="./assets/second_assignment/iteration_table.png" width="400"/>
 </p>
-\
+
+
 ## Assignment 3
 Implementare un passo di Loop-Invariant Code Motion (LICM) che sposti al di fuori del loop le istruzioni non dipendenti dal loop stesso.
 
