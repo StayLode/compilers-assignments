@@ -48,3 +48,22 @@ L'algoritmo si suddivide nei seguenti passaggi:
       2. l’istruzione (la definizione) domina tutti gli usi (sottointeso nel SSA)
       3. il basic block contenente l'istruzione domina tutte le uscite del loop OPPURE la variabile definita dall'istruzione è dead all'uscita del loop, ovvero non ha usi
    6. Spostare le istruzioni trovate nel blocco preheader.
+
+## Assignment 4
+Implementare un passo di Loop Fusion che sia in grado di fondere due loop se verificate le seguenti condizioni:
+1. $L_j$ e $L_k$ devono essere adiacenti
+   - Non ci devono essere statements da eseguire tra la fine di $L_j$ e l'inizio di $L_k$. Garanzia che tutte le volte che esegue il primo dei due eseguirà anche il secondo; dal punto di vista di dominanza non avrebbe senso fondere i due loop altrimenti.
+2. $L_j$ e $L_k$ devono iterare lo stesso numero di volte
+3. $L_j$ e $L_k$ devono essere control flow equivalenti
+   - Se $L_j$ esegue, anche $L_k$ deve eseguire, o viceversa
+4. Non ci devono essere dipendenze a distanza negativa
+   - una distanza negativa accade tra $L_j$ e $L_k$ ($L_j$ prima di $L_k$), quando ad un’iterazione $m$, $L_k$ usa un valore che è calcolato da $L_j$ ad una iterazione futura $m+n$ (con $n>0$)
+
+Una volta verificate tutte queste condizioni, si può trasformare il codice.
+In particolare:
+1. Si devono modificare gli usi della induction variable nel body del loop 2 con quelli della induction variable del loop 1 (in SSA sono due variabili diverse)
+2. Si deve modificare il CFG perché il body del loop 2 siaagganciato a seguito del body del loop 1 nel loop 1
+
+<p align="center">
+  <img src="./assets/fourth_assignment/loop_transformation.png" width="400"/>
+</p>
