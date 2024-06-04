@@ -49,8 +49,12 @@ L'algoritmo si suddivide nei seguenti passaggi:
       3. il basic block contenente l'istruzione domina tutte le uscite del loop OPPURE la variabile definita dall'istruzione è dead all'uscita del loop, ovvero non ha usi
    6. Spostare le istruzioni trovate nel blocco preheader.
 
-##Assignment 4
+## Assignment 4
 Implementare un passo di Loop Fusion che sia in grado di fondere due loop se verificate le seguenti condizioni:
-1. L_j e L_k devono essere adiacenti
-   - Non ci devono essere statements da eseguire tra la fine di L_j e l'inizio di L_k
-3. 
+1. $L_j$ e $L_k$ devono essere adiacenti
+   - Non ci devono essere statements da eseguire tra la fine di $L_j$ e l'inizio di $L_k$
+2. $L_j$ e $L_k$ devono iterare lo stesso numero di volte
+3. $L_j$ e $L_k$ devono essere control flow equivalenti
+   - Se $L_j$ esegue, anche $L_k$ deve eseguire, o viceversa
+4. Non ci devono essere dipendenze a distanza negativa
+   - una distanza negativa accade tra $L_j$ e $L_k$ ($L_j$ prima di $L_k$), quando ad un’iterazione m $L_k$ usa un valore che è calcolato da $L_j$ ad una iterazione futura $m+n$ (con $n>0$)
