@@ -48,3 +48,9 @@ L'algoritmo si suddivide nei seguenti passaggi:
       2. l’istruzione (la definizione) domina tutti gli usi (sottointeso nel SSA)
       3. il basic block contenente l'istruzione domina tutte le uscite del loop OPPURE la variabile definita dall'istruzione è dead all'uscita del loop, ovvero non ha usi
    6. Spostare le istruzioni trovate nel blocco preheader.
+
+##Assignment 4
+Implementare un passo di Loop Fusion che sia in grado di fondere due loop se verificate le seguenti condizioni:
+1. L_j e L_k devono essere adiacenti
+   - Non ci devono essere statements da eseguire tra la fine di L_j e l'inizio di L_k
+3. 
