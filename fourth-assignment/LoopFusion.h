@@ -6,7 +6,8 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Analysis/PostDominators.h"
-
+#include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 namespace llvm{
     class LoopFusion: public PassInfoMixin<LoopFusion> {
