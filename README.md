@@ -62,7 +62,7 @@ Implementare un passo di Loop Fusion che sia in grado di fondere due loop se ver
 Una volta verificate tutte queste condizioni, si può trasformare il codice.
 In particolare:
 1. Si devono modificare gli usi della induction variable nel body del loop 2 con quelli della induction variable del loop 1 (in SSA sono due variabili diverse)
-2. Si deve modificare il CFG perché il body del loop 2 siaagganciato a seguito del body del loop 1 nel loop 1
+2. Si deve modificare il CFG perché il body del loop 2 sia agganciato a seguito del body del loop 1 nel loop 1
 
 <p align="center">
   <img src="./assets/fourth_assignment/loop_transformation.png" width="400"/>
